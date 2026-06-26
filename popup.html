@@ -29,28 +29,16 @@
     <div class="zone-section">
       <div class="zone-header">
         <span class="zone-label">Time Zones</span>
-        <div class="mode-pill">
-          <button class="mpill-btn on" id="btn12" type="button" data-mode="12">12H</button>
-          <button class="mpill-btn"    id="btn24" type="button" data-mode="24">24H</button>
+        <div class="zone-header-right">
+          <button class="zone-edit-btn" id="zoneEditBtn" type="button" title="Edit time zones">⚙ EDIT</button>
+          <div class="mode-pill">
+            <button class="mpill-btn on" id="btn12" type="button" data-mode="12">12H</button>
+            <button class="mpill-btn"    id="btn24" type="button" data-mode="24">24H</button>
+          </div>
         </div>
       </div>
-      <div class="timezones">
-        <div class="tz-card active">
-          <div class="tz-name">IST</div>
-          <div class="tz-time"><span id="t-ist">--:--</span><span class="tz-ampm" id="ampm-ist">AM</span></div>
-          <div class="tz-sub"  id="a-ist">+05:30</div>
-        </div>
-        <div class="tz-card">
-          <div class="tz-name">UTC</div>
-          <div class="tz-time"><span id="t-utc">--:--</span><span class="tz-ampm" id="ampm-utc">AM</span></div>
-          <div class="tz-sub"  id="a-utc">±00:00</div>
-        </div>
-        <div class="tz-card">
-          <div class="tz-name">CT</div>
-          <div class="tz-time"><span id="t-ct">--:--</span><span class="tz-ampm" id="ampm-ct">AM</span></div>
-          <div class="tz-sub"  id="a-ct">−05:00</div>
-        </div>
-      </div>
+      <div class="timezones" id="timezonesEl"></div>
+      <div class="zone-editor" id="zoneEditor" hidden></div>
     </div>
 
     <div class="divider"></div>
