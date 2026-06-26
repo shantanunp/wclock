@@ -82,18 +82,62 @@ function formatOffset(mins) {
   return sign + String(Math.floor(abs / 60)).padStart(2, '0') + ':' + String(abs % 60).padStart(2, '0');
 }
 
+// ── Manual per-zone offset overrides ────────────────────────────────────────
+//
+// Safety valve for the gap between a real-world DST/offset change and the
+// matching tzdata reaching the user's Chrome. `overrides[zoneId]` is a signed
+// minute delta added on top of whatever Intl computes — e.g. +60 to force EDT
+// behaviour on a stale Chrome that still thinks New York is in EST.
+//
+// Stored persistently. Clamped to ±240 minutes (4 hours) so a misclick can't
+// silently put a card half a day off.
+const ADJ_STEP_MIN   = 15;
+const ADJ_CLAMP_MIN  = 240;
+
+function overrideFor(id) {
+  return overrides[id] || 0;
+}
+
+function effectiveOffsetFor(preset, date = new Date()) {
+  return offsetMinutesFor(preset.tz, date) + overrideFor(preset.id);
+}
+
+function setOverride(id, mins) {
+  const v = Math.max(-ADJ_CLAMP_MIN, Math.min(ADJ_CLAMP_MIN, mins | 0));
+  if (v === 0) delete overrides[id];
+  else overrides[id] = v;
+  store.set({ [STORAGE_KEYS.overrides]: overrides });
+}
+
+function bumpOverride(id, deltaMins) {
+  setOverride(id, overrideFor(id) + deltaMins);
+}
+
+function formatAdj(mins) {
+  if (!mins) return '';
+  const sign = mins > 0 ? '+' : '−';
+  const abs  = Math.abs(mins);
+  const h    = Math.floor(abs / 60);
+  const m    = abs % 60;
+  if (h && m) return `${sign}${h}h${m}m`;
+  if (h)      return `${sign}${h}h`;
+  return       `${sign}${m}m`;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let sliderMin = null;  // null = follow live wall clock; otherwise 0-1440 (minutes of day in the anchor zone)
 let clockMode = 12;
 let isDark    = true;
 let zones     = DEFAULT_ZONES.slice();
+let overrides = {};    // { zoneId: signed minutes offset adjustment }
 let editing   = false;
 let timerId   = null;
 
 const STORAGE_KEYS = {
-  theme: 'chrono.theme',
-  mode:  'chrono.mode',
-  zones: 'chrono.zones',
+  theme:     'chrono.theme',
+  mode:      'chrono.mode',
+  zones:     'chrono.zones',
+  overrides: 'chrono.overrides',
 };
 
 // chrome.storage is async; fall back to localStorage when running outside an extension.
@@ -228,11 +272,14 @@ function renderZoneCards() {
     card.className = 'tz-card' + (idx === 0 ? ' active' : '');
     card.dataset.id = id;
     card.innerHTML = `
-      <div class="tz-name">${nameFor(p, now)}</div>
+      <div class="tz-name">
+        <span class="tz-name-text">${nameFor(p, now)}</span>
+        <span class="tz-adj-badge" hidden></span>
+      </div>
       <div class="tz-time">
         <span class="tz-time-val">--:--</span><span class="tz-ampm"></span>
       </div>
-      <div class="tz-sub">${formatOffset(offsetMinutesFor(p.tz, now))}</div>
+      <div class="tz-sub">${formatOffset(effectiveOffsetFor(p, now))}</div>
     `;
     root.appendChild(card);
   });
@@ -245,13 +292,24 @@ function updateZones(utcMins) {
     const p = PRESET_BY_ID[card.dataset.id];
     if (!p) return;
     // Recompute per tick so DST transitions take effect even while popup is open.
-    const off  = offsetMinutesFor(p.tz, now);
+    const off  = effectiveOffsetFor(p, now);
     const mins = ((utcMins + off) % 1440 + 1440) % 1440;
     const { t, a } = fmt(mins);
     card.querySelector('.tz-time-val').textContent = t;
-    card.querySelector('.tz-ampm').textContent   = a;
-    card.querySelector('.tz-name').textContent   = nameFor(p, now);
-    card.querySelector('.tz-sub').textContent    = formatOffset(off);
+    card.querySelector('.tz-ampm').textContent     = a;
+    card.querySelector('.tz-name-text').textContent = nameFor(p, now);
+    card.querySelector('.tz-sub').textContent      = formatOffset(off);
+
+    const badge = card.querySelector('.tz-adj-badge');
+    const adj   = overrideFor(p.id);
+    if (adj) {
+      badge.textContent = 'ADJ ' + formatAdj(adj);
+      badge.hidden = false;
+      card.classList.add('has-adj');
+    } else {
+      badge.hidden = true;
+      card.classList.remove('has-adj');
+    }
   });
 }
 
@@ -273,11 +331,12 @@ function setFill() {
   s.style.setProperty('--fill', (parseInt(s.value, 10) / 1440 * 100) + '%');
 }
 
-// Returns the current DST-aware offset (in minutes) of the anchor zone — the
-// first zone in the list. Defaults to UTC if the list is somehow empty.
+// Returns the current effective offset (in minutes) of the anchor zone — the
+// first zone in the list. Includes any manual override on that zone.
+// Defaults to UTC if the list is somehow empty.
 function anchorOffset() {
   const anchor = PRESET_BY_ID[zones[0]];
-  return anchor ? offsetMinutesFor(anchor.tz) : 0;
+  return anchor ? effectiveOffsetFor(anchor) : 0;
 }
 
 function applyMinute(totalMin) {
@@ -338,18 +397,35 @@ function renderEditor() {
   zones.forEach((id, idx) => {
     const p = PRESET_BY_ID[id];
     if (!p) return;
+    const adj    = overrideFor(id);
+    const effOff = effectiveOffsetFor(p, now);
+    const adjBadge = adj
+      ? `<span class="editor-adj-badge">${formatAdj(adj)}</span>` : '';
+    const adjLabel = adj
+      ? `Manual nudge <strong>${formatAdj(adj)}</strong>`
+      : `Manual nudge`;
     const row = document.createElement('div');
-    row.className = 'editor-row';
+    row.className = 'editor-row' + (adj ? ' has-adj' : '');
     row.innerHTML = `
-      <span class="editor-row-anchor">${idx === 0 ? '★' : '·'}</span>
-      <span class="editor-row-name">${nameFor(p, now)}</span>
-      <span class="editor-row-label">${p.label}</span>
-      <span class="editor-row-offset">${formatOffset(offsetMinutesFor(p.tz, now))}</span>
-      <span class="editor-row-actions">
-        <button class="editor-mini" data-act="up"   data-idx="${idx}" ${idx === 0 ? 'disabled' : ''} title="Move up">↑</button>
-        <button class="editor-mini" data-act="down" data-idx="${idx}" ${idx === zones.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
-        <button class="editor-mini editor-mini-danger" data-act="rm" data-idx="${idx}" ${zones.length === 1 ? 'disabled' : ''} title="Remove">✕</button>
-      </span>
+      <div class="editor-row-main">
+        <span class="editor-row-anchor">${idx === 0 ? '★' : '·'}</span>
+        <span class="editor-row-name">${nameFor(p, now)}</span>
+        <span class="editor-row-label">${p.label}</span>
+        <span class="editor-row-offset">${formatOffset(effOff)} ${adjBadge}</span>
+        <span class="editor-row-actions">
+          <button class="editor-mini" data-act="up"   data-idx="${idx}" ${idx === 0 ? 'disabled' : ''} title="Move up">↑</button>
+          <button class="editor-mini" data-act="down" data-idx="${idx}" ${idx === zones.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
+          <button class="editor-mini editor-mini-danger" data-act="rm" data-idx="${idx}" ${zones.length === 1 ? 'disabled' : ''} title="Remove">✕</button>
+        </span>
+      </div>
+      <div class="editor-row-adj">
+        <span class="editor-row-adj-label">${adjLabel}</span>
+        <span class="editor-row-adj-stepper">
+          <button class="editor-mini editor-adj"       data-act="adj-" data-idx="${idx}" ${adj <= -ADJ_CLAMP_MIN ? 'disabled' : ''} title="Nudge −${ADJ_STEP_MIN} min">−${ADJ_STEP_MIN}m</button>
+          <button class="editor-mini editor-adj"       data-act="adj+" data-idx="${idx}" ${adj >=  ADJ_CLAMP_MIN ? 'disabled' : ''} title="Nudge +${ADJ_STEP_MIN} min">+${ADJ_STEP_MIN}m</button>
+          <button class="editor-mini editor-adj-reset" data-act="adj0" data-idx="${idx}" ${adj === 0 ? 'disabled' : ''} title="Clear adjustment">↺</button>
+        </span>
+      </div>
     `;
     list.appendChild(row);
   });
@@ -380,7 +456,8 @@ function renderEditor() {
   // Hint
   const hint = document.createElement('div');
   hint.className = 'editor-hint';
-  hint.textContent = '★ marks the anchor zone — the slider tracks time-of-day in this zone.';
+  hint.innerHTML = '★ marks the anchor zone — the slider tracks time-of-day in this zone.<br>' +
+    `Use <strong>−${ADJ_STEP_MIN}m / +${ADJ_STEP_MIN}m</strong> to manually nudge a zone if your browser's timezone database is out of date (e.g. a country shifted DST and Chrome hasn't updated yet). Cleared with ↺.`;
   editor.appendChild(hint);
 
   // Wire up
@@ -389,14 +466,23 @@ function renderEditor() {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx, 10);
       const act = btn.dataset.act;
+      const id  = zones[idx];
       if (act === 'up' && idx > 0) {
         [zones[idx - 1], zones[idx]] = [zones[idx], zones[idx - 1]];
+        saveZones();
       } else if (act === 'down' && idx < zones.length - 1) {
         [zones[idx + 1], zones[idx]] = [zones[idx], zones[idx + 1]];
+        saveZones();
       } else if (act === 'rm' && zones.length > 1) {
         zones.splice(idx, 1);
+        saveZones();
+      } else if (act === 'adj-') {
+        bumpOverride(id, -ADJ_STEP_MIN);
+      } else if (act === 'adj+') {
+        bumpOverride(id,  ADJ_STEP_MIN);
+      } else if (act === 'adj0') {
+        setOverride(id, 0);
       } else return;
-      saveZones();
       renderEditor();
     });
   });
@@ -476,7 +562,12 @@ function stopLoop() {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const saved = await store.get([STORAGE_KEYS.theme, STORAGE_KEYS.mode, STORAGE_KEYS.zones]);
+  const saved = await store.get([
+    STORAGE_KEYS.theme,
+    STORAGE_KEYS.mode,
+    STORAGE_KEYS.zones,
+    STORAGE_KEYS.overrides,
+  ]);
   if (saved[STORAGE_KEYS.theme] === 'light') isDark = false;
   if (saved[STORAGE_KEYS.mode] === 24) clockMode = 24;
   if (Array.isArray(saved[STORAGE_KEYS.zones])) {
@@ -484,6 +575,15 @@ async function init() {
       .filter((id) => PRESET_BY_ID[id])
       .slice(0, MAX_ZONES);
     if (cleaned.length > 0) zones = cleaned;
+  }
+  if (saved[STORAGE_KEYS.overrides] && typeof saved[STORAGE_KEYS.overrides] === 'object') {
+    // Defensive sanitisation: only keep entries for known presets, clamp the
+    // value, and drop zeros.
+    for (const [id, raw] of Object.entries(saved[STORAGE_KEYS.overrides])) {
+      if (!PRESET_BY_ID[id]) continue;
+      const v = Math.max(-ADJ_CLAMP_MIN, Math.min(ADJ_CLAMP_MIN, parseInt(raw, 10) || 0));
+      if (v !== 0) overrides[id] = v;
+    }
   }
 
   buildNotches();

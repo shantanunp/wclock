@@ -447,6 +447,75 @@ body.light .editor-mini:hover:not(:disabled) { background: #d8dce8; }
 body.dark  .editor-mini-danger:hover:not(:disabled) { background: #4a1c1c; color: #ff8077; }
 body.light .editor-mini-danger:hover:not(:disabled) { background: #f8d7d4; color: #a01818; }
 
+/* Per-zone manual offset adjustment stepper (used when Chrome's bundled tzdata
+   is stale — e.g. a country shifted DST rules and the update hasn't landed).
+   Rendered as a slim sub-row beneath each zone so the main row layout is
+   preserved. */
+.editor-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
+.editor-row-main {
+  display: grid;
+  grid-template-columns: 24px 60px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+}
+.editor-row-adj {
+  display: flex; align-items: center; gap: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed transparent;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+body.dark  .editor-row-adj { color: #6b748f; border-top-color: #1e2538; }
+body.light .editor-row-adj { color: #6a7290; border-top-color: #b4bace; }
+.editor-row-adj-label { opacity: 0.8; }
+.editor-row-adj-stepper { display: inline-flex; gap: 4px; margin-left: auto; }
+.editor-adj { width: auto; min-width: 38px; padding: 0 6px; font-size: 11px; font-weight: 700; height: 24px; }
+.editor-adj-reset { width: 26px !important; min-width: 26px; padding: 0; height: 24px; }
+body.dark  .editor-adj-reset:hover:not(:disabled) { background: #2a3450; color: #f5c043; }
+body.light .editor-adj-reset:hover:not(:disabled) { background: #d8dce8; color: #7c4a00; }
+
+/* When override is active: brighten the sub-row label, drop the dashed
+   separator, and highlight the row. */
+body.dark  .editor-row.has-adj .editor-row-adj { color: #f5c043; border-top-color: rgba(245, 192, 67, 0.35); }
+body.light .editor-row.has-adj .editor-row-adj { color: #7c4a00; border-top-color: rgba(124, 74, 0, 0.35); }
+body.dark  .editor-row.has-adj { border-color: rgba(245, 192, 67, 0.4); }
+body.light .editor-row.has-adj { border-color: rgba(124, 74, 0, 0.4); }
+
+/* Inline "ADJ +1h" badge — shown both on the cards and in the editor rows.
+   Amber tint signals "manually overridden, not what Intl thinks". */
+.editor-adj-badge,
+.tz-adj-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+body.dark .editor-adj-badge,
+body.dark .tz-adj-badge {
+  color: #f5c043;
+  background: rgba(245, 192, 67, 0.12);
+  border: 1px solid rgba(245, 192, 67, 0.4);
+}
+body.light .editor-adj-badge,
+body.light .tz-adj-badge {
+  color: #7c4a00;
+  background: rgba(232, 200, 74, 0.18);
+  border: 1px solid rgba(124, 74, 0, 0.4);
+}
+
+/* Card with an active adjustment gets a thin amber accent on the left so it's
+   visible at a glance even without reading the badge. */
+body.dark  .tz-card.has-adj { border-left: 2px solid rgba(245, 192, 67, 0.55); }
+body.light .tz-card.has-adj { border-left: 2px solid rgba(124, 74, 0, 0.55);  }
+
 .editor-add {
   display: flex; align-items: center; gap: 10px;
   padding-top: 8px;
