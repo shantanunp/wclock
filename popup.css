@@ -15,7 +15,14 @@ html {
   margin: 0;
   padding: 0;
   transition: background 0.4s;
+  /* Hide scrollbars. Chrome extension popups are already clipped by the
+     browser chrome; pywebview windows get this suppression so the widget
+     looks clean without needing exact pixel-perfect height tuning. */
+  overflow: hidden;
 }
+/* WebKit scrollbar suppression (Chrome, WebKit2GTK, WebView2). */
+html::-webkit-scrollbar { display: none; }
+body::-webkit-scrollbar { display: none; }
 html.dark  { background: #12151e; }
 html.light { background: #f4f6fb; }
 

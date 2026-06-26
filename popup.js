@@ -140,29 +140,72 @@ const STORAGE_KEYS = {
   overrides: 'chrono.overrides',
 };
 
-// chrome.storage is async; fall back to localStorage when running outside an extension.
+// Storage abstraction — three backends selected automatically by context:
+//
+//   pywebview desktop  →  window.pywebview.api  →  desktop/chrono_display.json
+//   Chrome/Edge ext    →  chrome.storage.local  →  browser profile (device-only)
+//   plain browser      →  localStorage          →  browser origin storage
+//
+// pywebview injects window.pywebview.api asynchronously after page load
+// (signalled by 'pywebviewready'). get() suspends if the API is not yet
+// available but we are on localhost (pywebview's http_server origin), so
+// init() always reads from the JSON file — never from localStorage.
 const store = {
+  _pywv() {
+    return (typeof window !== 'undefined' &&
+            window.pywebview &&
+            window.pywebview.api) ? window.pywebview.api : null;
+  },
+  _onLocalhost() {
+    return typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+       window.location.hostname === '127.0.0.1');
+  },
   get(keys) {
+    const pywv = this._pywv();
+    if (pywv) return pywv.get(keys);            // API ready — use JSON file
+
+    if (this._onLocalhost()) {
+      // pywebview context but API not injected yet.
+      // Suspend here until pywebviewready fires; addEventListener is registered
+      // synchronously so the event cannot be missed between the _pywv() check
+      // above and the listener below.
+      return new Promise((resolve) => {
+        window.addEventListener('pywebviewready', () => {
+          window.pywebview.api.get(keys).then(resolve);
+        }, { once: true });
+      });
+    }
+
+    // Chrome extension or plain browser.
     return new Promise((resolve) => {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.get(keys, (res) => resolve(res || {}));
       } else {
-        const out = {};
-        keys.forEach((k) => {
-          const v = localStorage.getItem(k);
-          if (v !== null) {
-            try { out[k] = JSON.parse(v); } catch { out[k] = v; }
-          }
-        });
-        resolve(out);
+        try {
+          const out = {};
+          keys.forEach((k) => {
+            const v = localStorage.getItem(k);
+            if (v !== null) {
+              try { out[k] = JSON.parse(v); } catch { out[k] = v; }
+            }
+          });
+          resolve(out);
+        } catch (_) {
+          resolve({});
+        }
       }
     });
   },
   set(obj) {
+    const pywv = this._pywv();
+    if (pywv) { pywv.set(obj); return; }
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set(obj);
     } else {
-      Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
+      try {
+        Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, JSON.stringify(v)));
+      } catch (_) {}
     }
   },
 };
