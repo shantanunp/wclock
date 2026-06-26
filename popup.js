@@ -144,7 +144,12 @@ function onSlider(v) {
   sliderMin = parseInt(v, 10);
   setFill();
   applyMinute(sliderMin);
-  document.getElementById('resetHint').classList.add('visible');
+  document.getElementById('resetBtn').hidden = false;
+}
+
+function resetSliderToLive() {
+  sliderMin = null;
+  document.getElementById('resetBtn').hidden = true;
 }
 
 function setFill() {
@@ -276,10 +281,8 @@ async function init() {
   overlay.addEventListener('pointerup',     endDrag);
   overlay.addEventListener('pointercancel', endDrag);
 
-  overlay.addEventListener('dblclick', () => {
-    sliderMin = null;
-    document.getElementById('resetHint').classList.remove('visible');
-  });
+  overlay.addEventListener('dblclick', resetSliderToLive);
+  document.getElementById('resetBtn').addEventListener('click', resetSliderToLive);
 
   applyTheme();
   document.getElementById('btn12').classList.toggle('on', clockMode === 12);

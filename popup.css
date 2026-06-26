@@ -1,6 +1,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { font-family: 'Rajdhani', sans-serif; }
+:root {
+  /* System font stacks — no external fetch, no FOIT. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
+               Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+html, body { font-family: var(--font-sans); }
 
 html {
   width: 800px;
@@ -39,13 +47,13 @@ body.light { background: #f4f6fb; }
   font-size: 18px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
 }
 body.dark  .header-title { color: #8a93b0; }
 body.light .header-title { color: #4a5272; }
 
 .header-now {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 28px; font-weight: 700;
   letter-spacing: 0.03em; line-height: 1;
   display: inline-flex; align-items: baseline; gap: 6px;
@@ -80,7 +88,7 @@ body.light .header-now { color: #7c4a00; }
 
 .theme-btn {
   padding: 8px 20px; border-radius: 30px; border: none; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 15px; letter-spacing: 0.1em;
   transition: all 0.4s;
 }
@@ -97,7 +105,7 @@ body.light .scale-section { background: #eaecf5; border: 1px solid #b4bace; }
 
 .scale-label {
   font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   margin-bottom: 12px;
 }
 body.dark  .scale-label { color: #8a93b0; }
@@ -107,7 +115,7 @@ body.light .scale-label { color: #4a5272; }
 .scale-tick { display: flex; flex-direction: column; align-items: center; gap: 0; }
 
 .sn24 {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 19px; line-height: 1;
   margin-bottom: 6px;
   transition: color 0.25s, font-weight 0.2s;
@@ -123,7 +131,7 @@ body.dark  .sbar { background: #3a4868; }
 body.light .sbar { background: #a0a8c4; }
 
 .sn12 {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 16px; line-height: 1;
   margin-top: 6px;
   transition: color 0.25s;
@@ -143,7 +151,7 @@ body.light .scale-tick.active .sn12 { color: #9e5800; }
 .zone-header { display: flex; justify-content: space-between; align-items: center; }
 .zone-label {
   font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
 }
 body.dark  .zone-label { color: #8a93b0; }
 body.light .zone-label { color: #4a5272; }
@@ -151,7 +159,7 @@ body.light .zone-label { color: #4a5272; }
 .mode-pill { display: flex; }
 .mpill-btn {
   padding: 6px 21px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase;
   cursor: pointer; border: none;
   transition: all 0.25s;
@@ -175,7 +183,7 @@ body.light .tz-card.active { border-color: #7c4a00; box-shadow: 0 0 18px rgba(12
 
 .tz-name {
   font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   margin-bottom: 9px;
 }
 body.dark  .tz-name { color: #98a1bc; }
@@ -183,7 +191,7 @@ body.light .tz-name { color: #3a4262; }
 
 .tz-time {
   font-size: 36px; font-weight: 700;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   letter-spacing: 0.02em; line-height: 1;
   display: inline-flex; align-items: baseline; gap: 6px;
   justify-content: center; width: 100%;
@@ -202,7 +210,7 @@ body.light .tz-card.active .tz-time { color: #7c4a00; }
 
 .tz-sub {
   font-size: 15px; margin-top: 8px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
 }
 body.dark  .tz-sub { color: #8a93b0; }
 body.light .tz-sub { color: #4a5272; }
@@ -218,13 +226,13 @@ body.light .divider { background: #c8ccd8; }
 
 .slider-label {
   font-size: 15px; letter-spacing: 0.16em; text-transform: uppercase;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
 }
 body.dark  .slider-label { color: #8a93b0; }
 body.light .slider-label { color: #4a5272; }
 
 .slider-value {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 24px; letter-spacing: 0.04em;
 }
 body.dark  .slider-value { color: #e8c84a; }
@@ -304,24 +312,24 @@ body.dark  input[type=range]::-moz-range-thumb { background: #12151e; border: 4p
 body.light input[type=range]::-moz-range-thumb { background: #fff;    border: 4px solid #7c4a00; }
 
 .slider-marks { display: flex; justify-content: space-between; padding: 0 3px; }
-.slider-mark  { font-size: 15px; font-family: 'Share Tech Mono', monospace; }
+.slider-mark  { font-size: 15px; font-family: var(--font-mono); }
 body.dark  .slider-mark { color: #8a93b0; }
 body.light .slider-mark { color: #4a5272; }
 
-.reset-hint {
-  text-align: center; font-size: 12px;
-  font-family: 'Share Tech Mono', monospace;
-  letter-spacing: 0.1em;
-  height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity 0.4s, height 0.3s ease, margin-top 0.3s ease;
-  margin-top: 0;
+/* Right-hand cluster inside the slider header: optional reset pill + time. */
+.slider-right { display: inline-flex; align-items: center; gap: 12px; }
+
+.reset-btn {
+  padding: 4px 12px;
+  border: none; border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s, color 0.2s;
 }
-body.dark  .reset-hint { color: #8a93b0; }
-body.light .reset-hint { color: #4a5272; }
-.reset-hint.visible {
-  opacity: 1;
-  height: 17px;
-  margin-top: 6px;
-}
+.reset-btn[hidden] { display: none; }
+body.dark  .reset-btn { background: #1c2234; color: #e8c84a; }
+body.light .reset-btn { background: #e2e5f0; color: #6b3f00; border: 1px solid #b4bace; }
+body.dark  .reset-btn:hover { background: #252e48; }
+body.light .reset-btn:hover { background: #d8dce8; }

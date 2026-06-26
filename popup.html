@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Chrono Display</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body class="dark">
@@ -61,7 +58,10 @@
     <div class="slider-section">
       <div class="slider-header">
         <span class="slider-label">Time Control · zones &amp; scale</span>
-        <span class="slider-value" id="sliderVal">--:--</span>
+        <div class="slider-right">
+          <button class="reset-btn" id="resetBtn" type="button" hidden title="Sync slider back to live time">↺ live</button>
+          <span class="slider-value" id="sliderVal">--:--</span>
+        </div>
       </div>
       <div class="slider-wrap">
         <div class="notch-track" id="notchTrack"></div>
@@ -75,7 +75,6 @@
         <span class="slider-mark">18</span>
         <span class="slider-mark">24</span>
       </div>
-      <div class="reset-hint" id="resetHint">↔ double-tap to sync live</div>
     </div>
 
   </div>
