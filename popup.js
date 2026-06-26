@@ -689,52 +689,132 @@ async function init() {
   // Keyboard (arrow keys / Home / End) still routes through the native input.
   slider.addEventListener('input', (e) => onSlider(e.target.value));
 
-  // Custom pointer drag with a heaviness factor — feels weightier than native.
-  // HEAVY < 1 = heavier than native (more drag distance per minute).
-  // 0.5  ≈ 2 px per minute  (≈4× heavier than native at 800px popup width)
-  // 0.75 ≈ 1.3 px per minute (≈2.6× heavier)
-  // 1.0  ≈ 1 px per minute   (≈2× heavier)
-  const HEAVY = 0.5;
-  let dragging = false;
-  let dragStartX = 0;
-  let dragStartValue = 0;
+  // Velocity-aware pointer drag — three explicit tiers:
+  //
+  //   ┌──────────┬──────────────────┬─────────────────┬──────────────────┐
+  //   │ Tier     │ Pointer velocity │ Multiplier      │ Feel             │
+  //   ├──────────┼──────────────────┼─────────────────┼──────────────────┤
+  //   │ Slowest  │ 0 – 1000 px/s    │ HEAVY    = 0.5  │ minute-by-minute │
+  //   │ Fast     │ 1000 – 1600 px/s │ MEDIUM   = 1.5  │ brisk scrub      │
+  //   │ Fastest  │ 1600+ px/s       │ FASTEST  = 4.0  │ flick-covers-day │
+  //   └──────────┴──────────────────┴─────────────────┴──────────────────┘
+  //
+  // The slowest tier intentionally takes the lion's share of the velocity
+  // range (~ 0 – 50 % of a typical fast flick) so the precise scrub feel
+  // dominates and you have to *deliberately* accelerate to engage faster
+  // modes. EMA smoothing on the velocity prevents flickering between tiers.
+  const HEAVY     = 0.5;      // multiplier in the slowest tier (~2 px / minute)
+  const MEDIUM    = 1.5;      // multiplier in the fast tier   (~0.67 px / minute)
+  const FASTEST   = 4.0;      // multiplier in the fastest tier (~0.25 px / minute)
+  const V_FAST    = 1.00;     // px / ms — at or above this, leave HEAVY for MEDIUM
+  const V_FASTEST = 1.60;     // px / ms — at or above this, leave MEDIUM for FASTEST
+  const SMOOTH    = 0.35;     // EMA weight for new velocity samples (0=none, 1=instant)
+
+  let dragging    = false;
+  let dragLastX   = 0;
+  let dragLastT   = 0;
+  let dragVel     = 0;        // smoothed |dx/dt| in px/ms
+  let dragFracMin = 0;        // sub-minute remainder, kept across moves for precision
+
+  function multiplierFor(v) {
+    if (v < V_FAST)    return HEAVY;
+    if (v < V_FASTEST) return MEDIUM;
+    return FASTEST;
+  }
+
+  // Drag state is centralised in beginDrag/endDrag so every safety-net event
+  // (pointerup, pointercancel, lostpointercapture, window blur, tab hidden)
+  // funnels through the same reset path. This is what fixes the "cursor
+  // stays as grabbing and slider keeps following the mouse after I let go"
+  // class of bugs — under Chrome extension popups, pointerup can be eaten
+  // when the popup loses focus mid-drag, so we never rely on it alone.
+  let activePointerId = null;
+
+  function beginDrag(e, startX) {
+    dragging        = true;
+    activePointerId = e.pointerId;
+    dragLastX       = startX;
+    dragLastT       = e.timeStamp;
+    dragVel         = 0;
+    dragFracMin     = 0;
+    overlay.classList.add('dragging');
+    try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
+  }
+
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    overlay.classList.remove('dragging');
+    const pid = (e && e.pointerId !== undefined) ? e.pointerId : activePointerId;
+    if (pid !== null) {
+      try { overlay.releasePointerCapture(pid); } catch (_) {}
+    }
+    activePointerId = null;
+  }
 
   // pointerdown does two things:
   //  1. Jumps the slider to the clicked position (native-style click-to-jump).
-  //  2. Anchors the heavy-drag from that new position.
+  //  2. Anchors the velocity tracker so the very first move event has a
+  //     sensible dt and dx.
   overlay.addEventListener('pointerdown', (e) => {
-    const rect = overlay.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    // Ignore secondary buttons (middle/right click) and any second finger.
+    if (e.button !== undefined && e.button !== 0) return;
+    if (dragging) return;
+
+    const rect   = overlay.getBoundingClientRect();
+    const ratio  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const jumped = Math.round(ratio * 1440);
     slider.value = jumped;
     onSlider(jumped);
 
-    dragging = true;
-    dragStartX = e.clientX;
-    dragStartValue = jumped;
-    try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
+    beginDrag(e, e.clientX);
     slider.focus();
     e.preventDefault();
   });
 
   overlay.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
+    if (!dragging || e.pointerId !== activePointerId) return;
     e.preventDefault();
-    const dx = e.clientX - dragStartX;
-    const next = Math.max(0, Math.min(1440, Math.round(dragStartValue + dx * HEAVY)));
-    if (next !== parseInt(slider.value, 10)) {
-      slider.value = next;
-      onSlider(next);
+
+    const now = e.timeStamp;
+    const dt  = Math.max(1, now - dragLastT);     // guard against div/0
+    const dx  = e.clientX - dragLastX;
+    dragLastX = e.clientX;
+    dragLastT = now;
+
+    // Smoothed velocity (px per ms). EMA so a brief pause mid-flick doesn't
+    // immediately collapse the multiplier back to HEAVY.
+    const instantV = Math.abs(dx) / dt;
+    dragVel = dragVel * (1 - SMOOTH) + instantV * SMOOTH;
+
+    // Accumulate sub-minute change, then apply whole minutes to the slider
+    // and carry the remainder. This is what makes slow scrubbing genuinely
+    // tick-by-tick — fractional pixels don't get rounded away each event.
+    dragFracMin += dx * multiplierFor(dragVel);
+    const whole = Math.trunc(dragFracMin);
+    if (whole !== 0) {
+      const cur  = parseInt(slider.value, 10);
+      const next = Math.max(0, Math.min(1440, cur + whole));
+      if (next !== cur) {
+        slider.value = next;
+        onSlider(next);
+      }
+      dragFracMin -= whole;
     }
   });
 
-  const endDrag = (e) => {
-    if (!dragging) return;
-    dragging = false;
-    try { overlay.releasePointerCapture(e.pointerId); } catch (_) {}
-  };
-  overlay.addEventListener('pointerup',     endDrag);
-  overlay.addEventListener('pointercancel', endDrag);
+  // Six different events can imply "drag is over". We funnel all of them to
+  // endDrag — overkill is the point: a stuck-drag bug is much worse than
+  // running endDrag twice (it's a no-op once `dragging` is false).
+  overlay.addEventListener('pointerup',          endDrag);
+  overlay.addEventListener('pointercancel',      endDrag);
+  overlay.addEventListener('lostpointercapture', endDrag);
+  // Popup focus loss (clicking outside, opening DevTools, switching tabs)
+  // can swallow pointerup before it reaches the overlay.
+  window.addEventListener('blur',                endDrag);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) endDrag();
+  });
 
   overlay.addEventListener('dblclick', resetSliderToLive);
   document.getElementById('resetBtn').addEventListener('click', resetSliderToLive);

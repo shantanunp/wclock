@@ -295,15 +295,20 @@ body.light .slider-value { color: #7c4a00; }
  * handlers here so we can scale drag distance → minutes with a "heaviness"
  * factor, while still letting the input keep its visual rendering, keyboard
  * support, and accessibility semantics. */
+/* Cursor state is driven by a JS-toggled .dragging class instead of the CSS
+   :active pseudo-class, because :active can latch on when the popup loses
+   focus or pointer capture is forcibly released — leaving a stuck
+   "grabbing" cursor even after pointerup. */
 .slider-overlay {
   position: absolute;
   inset: 0;
   z-index: 3;
   cursor: grab;
+  touch-action: none;  /* Prevent the browser from interpreting drag as a pan/scroll gesture. */
   touch-action: none;
   background: transparent;
 }
-.slider-overlay:active { cursor: grabbing; }
+.slider-overlay.dragging { cursor: grabbing; }
 
 .notch-track {
   position: absolute; left: 17px; right: 17px; top: 50%;
