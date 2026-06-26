@@ -56,10 +56,20 @@ body.light .header-title { color: #4a5272; }
   font-family: var(--font-mono);
   font-size: 28px; font-weight: 700;
   letter-spacing: 0.03em; line-height: 1;
-  display: inline-flex; align-items: baseline; gap: 6px;
+  display: inline-flex; align-items: center; gap: 6px;
 }
 body.dark  .header-now { color: #e8c84a; }
 body.light .header-now { color: #7c4a00; }
+
+/* Tiny analog face sitting before the digital time. Matches the digital
+   line-height so the two read as a single horizontal block; canvas backing
+   store is sized in JS to current devicePixelRatio for crispness on HiDPI. */
+.header-clock {
+  width: 28px; height: 28px;
+  flex: 0 0 auto;
+  display: inline-block;
+  margin-right: 4px;
+}
 .header-ampm {
   font-size: 16px; font-weight: 400;
   letter-spacing: 0.08em;

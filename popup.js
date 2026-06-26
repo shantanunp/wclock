@@ -178,6 +178,9 @@ function applyTheme() {
 function toggleTheme() {
   isDark = !isDark;
   applyTheme();
+  // Analog clock hands are theme-coloured — repaint without waiting for the
+  // next 1-second tick so the toggle feels instant.
+  if (document.getElementById('headerClock')) updateHeader();
   store.set({ [STORAGE_KEYS.theme]: isDark ? 'dark' : 'light' });
 }
 
@@ -231,6 +234,70 @@ function updateScale(h24) {
   );
 }
 
+// ── Tiny analog clock in the header ──────────────────────────────────────────
+// Draws a small clock face matching the digital time's height. Re-sizes the
+// canvas backing store to current devicePixelRatio so it stays crisp on HiDPI
+// displays even though the CSS size is fixed at 28×28.
+function drawHeaderClock(totalMins) {
+  const canvas = document.getElementById('headerClock');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssSize = canvas.clientWidth || 28;
+  const pxSize  = Math.max(1, Math.round(cssSize * dpr));
+  if (canvas.width !== pxSize || canvas.height !== pxSize) {
+    canvas.width = pxSize;
+    canvas.height = pxSize;
+  }
+
+  const ctx = canvas.getContext('2d');
+  const s = canvas.width;
+  ctx.clearRect(0, 0, s, s);
+  const cx = s / 2;
+  const cy = s / 2;
+  const r  = s * 0.44;
+
+  // Theme-aware palette — matches the digital time's amber accent.
+  const accent = isDark ? '#e8c84a' : '#7c4a00';
+  const ring   = isDark ? 'rgba(232, 200, 74, 0.45)' : 'rgba(124, 74, 0, 0.55)';
+
+  ctx.lineCap = 'round';
+
+  // Bezel
+  ctx.strokeStyle = ring;
+  ctx.lineWidth   = Math.max(1, s * 0.055);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Continuous angles — hour hand creeps with the minute for a natural look.
+  const h     = Math.floor(totalMins / 60) % 12;
+  const m     = totalMins % 60;
+  const hourA = ((h + m / 60) / 12) * Math.PI * 2 - Math.PI / 2;
+  const minA  = (m / 60)            * Math.PI * 2 - Math.PI / 2;
+
+  ctx.strokeStyle = accent;
+
+  // Hour hand (shorter, thicker)
+  ctx.lineWidth = Math.max(1.5, s * 0.085);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(hourA) * r * 0.50, cy + Math.sin(hourA) * r * 0.50);
+  ctx.stroke();
+
+  // Minute hand (longer, thinner)
+  ctx.lineWidth = Math.max(1.2, s * 0.055);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(minA) * r * 0.82, cy + Math.sin(minA) * r * 0.82);
+  ctx.stroke();
+
+  // Center cap
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(1.2, s * 0.07), 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // ── Time formatting ──────────────────────────────────────────────────────────
 function fmt(totalMins) {
   let h = Math.floor(totalMins / 60) % 24;
@@ -253,6 +320,7 @@ function updateHeader(now = new Date()) {
   const { t: timeStr, a: ampm } = fmt(aMins);
   document.getElementById('headerTime').textContent = timeStr;
   document.getElementById('headerAmpm').textContent = ampm;
+  drawHeaderClock(aMins);
 
   const tzEl = document.getElementById('headerTz');
   if (tzEl && anchor) tzEl.textContent = nameFor(anchor, now);
