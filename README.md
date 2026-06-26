@@ -60,15 +60,31 @@ needed since all timezone math is done locally.
 
 ## Customising timezones
 
-`TZ` and `offsetLabel` in `popup.js` define the three zones (in minutes from
-UTC):
+Open the popup, click `⚙ EDIT` next to the timezone cards, and use the editor
+to add, remove, reorder, or swap zones (up to four). The first card is the
+*anchor* (★) — the time slider tracks the time-of-day in that zone, and every
+other card is computed from it.
+
+The available cities live in the `PRESETS` array at the top of `popup.js`. Each
+entry uses an [IANA Time Zone Database](https://www.iana.org/time-zones)
+identifier, so daylight saving transitions are handled automatically and
+offline via `Intl.DateTimeFormat` (the browser ships the tzdata as part of
+ICU — no network calls, no manual offset math):
 
 ```js
-const TZ = { ist: 330, utc: 0, ct: -300 };
-const offsetLabel = { ist: '+05:30', utc: '±00:00', ct: '−05:00' };
+const PRESETS = [
+  { id: 'ist', name: 'IST',                  label: 'Mumbai',   tz: 'Asia/Kolkata'     },
+  { id: 'utc', name: 'UTC',                  label: 'Universal', tz: 'UTC'             },
+  { id: 'est', name: 'EST', nameDST: 'EDT',  label: 'New York', tz: 'America/New_York' },
+  // …
+];
 ```
 
-Swap or add zones by editing these objects and the matching `tz-card` blocks in
-`popup.html`. Note that `CT` here is treated as a fixed UTC−5 offset
-(Central Daylight Time); for full DST-aware timezones, swap the math for
-`Intl.DateTimeFormat` with a `timeZone` option.
+`name` is the standard-time abbreviation; `nameDST` (optional) is shown
+whenever the zone is currently observing DST — so a New York card switches
+from `EST −05:00` to `EDT −04:00` automatically across the spring/fall
+transitions, and a Sydney card behaves correctly in the southern hemisphere
+(AEDT in Dec–Apr, AEST in May–Oct).
+
+To add a new city, append an entry with a fresh `id` and a valid IANA `tz`.
+The editor dropdown picks it up automatically.

@@ -1,39 +1,79 @@
 'use strict';
 
-// ── Curated city presets (fixed UTC offsets — no DST handling) ───────────────
+// ── Curated city presets (IANA timezone IDs, DST handled by Intl) ───────────
+//
+// `tz` is the IANA Time Zone Database identifier. The browser ships the full
+// tzdata bundled with ICU, so all offset/DST math is purely local — no
+// network. `nameDST` is the abbreviation used when daylight time is active;
+// if omitted, the zone has no DST (or we just always use `name`).
 const PRESETS = [
   // Asia / Middle East
-  { id: 'ist',  name: 'IST',  label: 'Mumbai',            offset:  330 },
-  { id: 'pkt',  name: 'PKT',  label: 'Karachi',           offset:  300 },
-  { id: 'gst',  name: 'GST',  label: 'Dubai',             offset:  240 },
-  { id: 'bst',  name: 'BST',  label: 'Dhaka',             offset:  360 },
-  { id: 'ict',  name: 'ICT',  label: 'Bangkok · Jakarta', offset:  420 },
-  { id: 'sgt',  name: 'SGT',  label: 'Singapore',         offset:  480 },
-  { id: 'hkt',  name: 'HKT',  label: 'Hong Kong',         offset:  480 },
-  { id: 'jst',  name: 'JST',  label: 'Tokyo · Seoul',     offset:  540 },
+  { id: 'ist',  name: 'IST',                    label: 'Mumbai',            tz: 'Asia/Kolkata'      },
+  { id: 'pkt',  name: 'PKT',                    label: 'Karachi',           tz: 'Asia/Karachi'      },
+  { id: 'gst',  name: 'GST',                    label: 'Dubai',             tz: 'Asia/Dubai'        },
+  { id: 'bst',  name: 'BST',                    label: 'Dhaka',             tz: 'Asia/Dhaka'        },
+  { id: 'ict',  name: 'ICT',                    label: 'Bangkok · Jakarta', tz: 'Asia/Bangkok'      },
+  { id: 'sgt',  name: 'SGT',                    label: 'Singapore',         tz: 'Asia/Singapore'    },
+  { id: 'hkt',  name: 'HKT',                    label: 'Hong Kong',         tz: 'Asia/Hong_Kong'    },
+  { id: 'jst',  name: 'JST',                    label: 'Tokyo · Seoul',     tz: 'Asia/Tokyo'        },
   // Europe / UTC
-  { id: 'utc',  name: 'UTC',  label: 'Universal',         offset:    0 },
-  { id: 'gmt',  name: 'GMT',  label: 'London',            offset:    0 },
-  { id: 'cet',  name: 'CET',  label: 'Paris · Berlin',    offset:   60 },
-  { id: 'eet',  name: 'EET',  label: 'Helsinki · Athens', offset:  120 },
-  { id: 'msk',  name: 'MSK',  label: 'Moscow',            offset:  180 },
+  { id: 'utc',  name: 'UTC',                    label: 'Universal',         tz: 'UTC'               },
+  { id: 'gmt',  name: 'GMT',  nameDST: 'BST',   label: 'London',            tz: 'Europe/London'     },
+  { id: 'cet',  name: 'CET',  nameDST: 'CEST',  label: 'Paris · Berlin',    tz: 'Europe/Paris'      },
+  { id: 'eet',  name: 'EET',  nameDST: 'EEST',  label: 'Helsinki · Athens', tz: 'Europe/Helsinki'   },
+  { id: 'msk',  name: 'MSK',                    label: 'Moscow',            tz: 'Europe/Moscow'     },
   // Americas
-  { id: 'est',  name: 'EST',  label: 'New York',          offset: -300 },
-  { id: 'cst',  name: 'CST',  label: 'Chicago',           offset: -360 },
-  { id: 'mst',  name: 'MST',  label: 'Denver',            offset: -420 },
-  { id: 'pst',  name: 'PST',  label: 'Los Angeles',       offset: -480 },
-  { id: 'akst', name: 'AKST', label: 'Anchorage',         offset: -540 },
-  { id: 'hst',  name: 'HST',  label: 'Hawaii',            offset: -600 },
-  { id: 'art',  name: 'ART',  label: 'Buenos Aires',      offset: -180 },
-  { id: 'brt',  name: 'BRT',  label: 'São Paulo',         offset: -180 },
+  { id: 'est',  name: 'EST',  nameDST: 'EDT',   label: 'New York',          tz: 'America/New_York'  },
+  { id: 'cst',  name: 'CST',  nameDST: 'CDT',   label: 'Chicago',           tz: 'America/Chicago'   },
+  { id: 'mst',  name: 'MST',  nameDST: 'MDT',   label: 'Denver',            tz: 'America/Denver'    },
+  { id: 'pst',  name: 'PST',  nameDST: 'PDT',   label: 'Los Angeles',       tz: 'America/Los_Angeles' },
+  { id: 'akst', name: 'AKST', nameDST: 'AKDT',  label: 'Anchorage',         tz: 'America/Anchorage' },
+  { id: 'hst',  name: 'HST',                    label: 'Hawaii',            tz: 'Pacific/Honolulu'  },
+  { id: 'art',  name: 'ART',                    label: 'Buenos Aires',      tz: 'America/Argentina/Buenos_Aires' },
+  { id: 'brt',  name: 'BRT',                    label: 'São Paulo',         tz: 'America/Sao_Paulo' },
   // Pacific
-  { id: 'aest', name: 'AEST', label: 'Sydney',            offset:  600 },
-  { id: 'nzst', name: 'NZST', label: 'Auckland',          offset:  720 },
+  { id: 'aest', name: 'AEST', nameDST: 'AEDT',  label: 'Sydney',            tz: 'Australia/Sydney'  },
+  { id: 'nzst', name: 'NZST', nameDST: 'NZDT',  label: 'Auckland',          tz: 'Pacific/Auckland'  },
 ];
 const PRESET_BY_ID = Object.fromEntries(PRESETS.map((p) => [p.id, p]));
 
 const MAX_ZONES = 4;
 const DEFAULT_ZONES = ['ist', 'utc', 'est'];
+
+// ── DST-aware helpers (all offline — Intl uses bundled tzdata) ───────────────
+
+// Computes the UTC offset of a zone at a given moment, in minutes (e.g. -240
+// for America/New_York during EDT, -300 during EST). Robust across DST.
+function offsetMinutesFor(tz, date = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(date);
+    const g = (t) => +parts.find((p) => p.type === t).value;
+    const asUTC = Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second'));
+    return Math.round((asUTC - date.getTime()) / 60000);
+  } catch (_) {
+    return 0;
+  }
+}
+
+// True if the zone is currently observing daylight saving time. Works for both
+// hemispheres by comparing the year's min offset (= standard time) against now.
+function isDST(tz, date = new Date()) {
+  const y = date.getFullYear();
+  const jan = offsetMinutesFor(tz, new Date(Date.UTC(y, 0, 15)));
+  const jul = offsetMinutesFor(tz, new Date(Date.UTC(y, 6, 15)));
+  if (jan === jul) return false;
+  return offsetMinutesFor(tz, date) > Math.min(jan, jul);
+}
+
+// Preferred display abbreviation: nameDST during daylight time, else name.
+function nameFor(preset, date = new Date()) {
+  if (preset.nameDST && isDST(preset.tz, date)) return preset.nameDST;
+  return preset.name;
+}
 
 function formatOffset(mins) {
   if (mins === 0) return '±00:00';
@@ -180,6 +220,7 @@ function renderZoneCards() {
   // a 4-col template was hardcoded.
   root.style.gridTemplateColumns = `repeat(${zones.length}, 1fr)`;
 
+  const now = new Date();
   zones.forEach((id, idx) => {
     const p = PRESET_BY_ID[id];
     if (!p) return;
@@ -187,25 +228,30 @@ function renderZoneCards() {
     card.className = 'tz-card' + (idx === 0 ? ' active' : '');
     card.dataset.id = id;
     card.innerHTML = `
-      <div class="tz-name">${p.name}</div>
+      <div class="tz-name">${nameFor(p, now)}</div>
       <div class="tz-time">
         <span class="tz-time-val">--:--</span><span class="tz-ampm"></span>
       </div>
-      <div class="tz-sub">${formatOffset(p.offset)}</div>
+      <div class="tz-sub">${formatOffset(offsetMinutesFor(p.tz, now))}</div>
     `;
     root.appendChild(card);
   });
 }
 
 function updateZones(utcMins) {
+  const now = new Date();
   const cards = document.querySelectorAll('#timezonesEl .tz-card');
   cards.forEach((card) => {
     const p = PRESET_BY_ID[card.dataset.id];
     if (!p) return;
-    const mins = ((utcMins + p.offset) % 1440 + 1440) % 1440;
+    // Recompute per tick so DST transitions take effect even while popup is open.
+    const off  = offsetMinutesFor(p.tz, now);
+    const mins = ((utcMins + off) % 1440 + 1440) % 1440;
     const { t, a } = fmt(mins);
     card.querySelector('.tz-time-val').textContent = t;
-    card.querySelector('.tz-ampm').textContent = a;
+    card.querySelector('.tz-ampm').textContent   = a;
+    card.querySelector('.tz-name').textContent   = nameFor(p, now);
+    card.querySelector('.tz-sub').textContent    = formatOffset(off);
   });
 }
 
@@ -227,11 +273,11 @@ function setFill() {
   s.style.setProperty('--fill', (parseInt(s.value, 10) / 1440 * 100) + '%');
 }
 
-// Returns the offset (in minutes) of the anchor zone — the first zone in the
-// list. Defaults to UTC if the list is somehow empty.
+// Returns the current DST-aware offset (in minutes) of the anchor zone — the
+// first zone in the list. Defaults to UTC if the list is somehow empty.
 function anchorOffset() {
   const anchor = PRESET_BY_ID[zones[0]];
-  return anchor ? anchor.offset : 0;
+  return anchor ? offsetMinutesFor(anchor.tz) : 0;
 }
 
 function applyMinute(totalMin) {
@@ -251,8 +297,12 @@ function refreshFromSlider() {
   if (sliderMin !== null) {
     applyMinute(sliderMin);
   } else {
-    const now = new Date();
-    applyMinute(now.getHours() * 60 + now.getMinutes());
+    // Live mode: slider reflects time-of-day in the anchor zone, derived from
+    // UTC (not the user's local clock — they may live in a different zone).
+    const now      = new Date();
+    const utcMins  = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const anchorMm = ((utcMins + anchorOffset()) % 1440 + 1440) % 1440;
+    applyMinute(anchorMm);
   }
 }
 
@@ -282,6 +332,7 @@ function renderEditor() {
   editor.appendChild(head);
 
   // Row per current zone
+  const now  = new Date();
   const list = document.createElement('div');
   list.className = 'editor-list';
   zones.forEach((id, idx) => {
@@ -291,9 +342,9 @@ function renderEditor() {
     row.className = 'editor-row';
     row.innerHTML = `
       <span class="editor-row-anchor">${idx === 0 ? '★' : '·'}</span>
-      <span class="editor-row-name">${p.name}</span>
+      <span class="editor-row-name">${nameFor(p, now)}</span>
       <span class="editor-row-label">${p.label}</span>
-      <span class="editor-row-offset">${formatOffset(p.offset)}</span>
+      <span class="editor-row-offset">${formatOffset(offsetMinutesFor(p.tz, now))}</span>
       <span class="editor-row-actions">
         <button class="editor-mini" data-act="up"   data-idx="${idx}" ${idx === 0 ? 'disabled' : ''} title="Move up">↑</button>
         <button class="editor-mini" data-act="down" data-idx="${idx}" ${idx === zones.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
@@ -314,7 +365,7 @@ function renderEditor() {
     addRow.innerHTML = `<span class="editor-add-note">All preset cities already added.</span>`;
   } else {
     const opts = remaining.map((p) =>
-      `<option value="${p.id}">${p.name} · ${p.label} (${formatOffset(p.offset)})</option>`).join('');
+      `<option value="${p.id}">${nameFor(p, now)} · ${p.label} (${formatOffset(offsetMinutesFor(p.tz, now))})</option>`).join('');
     addRow.innerHTML = `
       <label class="editor-add-label">Add city</label>
       <select class="editor-select" id="zoneAddSelect">
@@ -390,20 +441,27 @@ function toggleEditMode() {
 
 // ── 1-second tick loop ───────────────────────────────────────────────────────
 function tick() {
-  const t = getLiveNow();
-  updateHeader(t);
+  const now = new Date();
+
+  // Header always shows the user's browser-local wall clock.
+  updateHeader({ h: now.getHours(), m: now.getMinutes(), s: now.getSeconds() });
 
   if (sliderMin === null) {
-    const totalMin = t.h * 60 + t.m;
-    document.getElementById('timeSlider').value = totalMin;
+    // Drive everything from UTC so the user's local zone is irrelevant — the
+    // slider tracks the ANCHOR zone (first card), each zone card derives its
+    // own DST-aware offset, and we don't accidentally double-shift.
+    const utcMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const anchorMm = ((utcMins + anchorOffset()) % 1440 + 1440) % 1440;
+    const ah = Math.floor(anchorMm / 60);
+    const am = anchorMm % 60;
+
+    document.getElementById('timeSlider').value = anchorMm;
     setFill();
     document.getElementById('sliderVal').textContent =
-      String(t.h).padStart(2, '0') + ':' + String(t.m).padStart(2, '0');
-    // Convert the user's local time-of-day to UTC via the anchor's offset.
-    // (Assumes the user's local zone == anchor zone, which is typical.)
-    const utc = ((totalMin - anchorOffset()) % 1440 + 1440) % 1440;
-    updateZones(utc);
-    updateScale(t.h);
+      String(ah).padStart(2, '0') + ':' + String(am).padStart(2, '0');
+
+    updateZones(utcMins);
+    updateScale(ah);
   }
 
   timerId = setTimeout(tick, 1000);
