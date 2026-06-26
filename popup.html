@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Chrono Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="dark">
+  <div class="widget">
+
+    <div class="header">
+      <div class="header-left">
+        <div class="header-now">
+          <span id="headerTime">--:--</span><span class="header-ampm" id="headerAmpm">AM</span>
+          <span class="header-tz">IST</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="theme-btn" id="themeBtn" type="button">☀ LIGHT</button>
+        <span class="live-dot"></span>
+      </div>
+    </div>
+
+    <div class="scale-section">
+      <div class="scale-label">12h → 24h · conversion scale</div>
+      <div class="scale-row" id="scaleRow"></div>
+    </div>
+
+    <div class="zone-section">
+      <div class="zone-header">
+        <span class="zone-label">Time Zones</span>
+        <div class="mode-pill">
+          <button class="mpill-btn on" id="btn12" type="button" data-mode="12">12H</button>
+          <button class="mpill-btn"    id="btn24" type="button" data-mode="24">24H</button>
+        </div>
+      </div>
+      <div class="timezones">
+        <div class="tz-card active">
+          <div class="tz-name">IST</div>
+          <div class="tz-time"><span id="t-ist">--:--</span><span class="tz-ampm" id="ampm-ist">AM</span></div>
+          <div class="tz-sub"  id="a-ist">+05:30</div>
+        </div>
+        <div class="tz-card">
+          <div class="tz-name">UTC</div>
+          <div class="tz-time"><span id="t-utc">--:--</span><span class="tz-ampm" id="ampm-utc">AM</span></div>
+          <div class="tz-sub"  id="a-utc">±00:00</div>
+        </div>
+        <div class="tz-card">
+          <div class="tz-name">CT</div>
+          <div class="tz-time"><span id="t-ct">--:--</span><span class="tz-ampm" id="ampm-ct">AM</span></div>
+          <div class="tz-sub"  id="a-ct">−05:00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="slider-section">
+      <div class="slider-header">
+        <span class="slider-label">Time Control · zones &amp; scale</span>
+        <span class="slider-value" id="sliderVal">--:--</span>
+      </div>
+      <div class="slider-wrap">
+        <div class="notch-track" id="notchTrack"></div>
+        <input type="range" id="timeSlider" min="0" max="1440" step="1" value="720">
+        <div class="slider-overlay" id="sliderOverlay" aria-hidden="true"></div>
+      </div>
+      <div class="slider-marks">
+        <span class="slider-mark">00</span>
+        <span class="slider-mark">06</span>
+        <span class="slider-mark">12</span>
+        <span class="slider-mark">18</span>
+        <span class="slider-mark">24</span>
+      </div>
+      <div class="reset-hint" id="resetHint">↔ double-tap to sync live</div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

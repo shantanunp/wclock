@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Chrono Display",
+  "version": "1.0.0",
+  "description": "A live multi-timezone clock widget with 12h \u2194 24h conversion scale and time-shift slider.",
+  "action": {
+    "default_title": "Chrono Display",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage"]
+}
