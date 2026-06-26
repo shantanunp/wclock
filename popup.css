@@ -498,6 +498,15 @@ body.light .editor-row.has-adj { border-color: rgba(124, 74, 0, 0.4); }
   vertical-align: middle;
   white-space: nowrap;
 }
+/* The class rule above out-specifies the UA `[hidden] { display:none }`, so we
+   restore that behaviour explicitly, and also collapse the badge whenever it
+   has no content (defensive). */
+.editor-adj-badge[hidden],
+.tz-adj-badge[hidden],
+.editor-adj-badge:empty,
+.tz-adj-badge:empty {
+  display: none;
+}
 body.dark .editor-adj-badge,
 body.dark .tz-adj-badge {
   color: #f5c043;
