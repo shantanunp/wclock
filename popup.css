@@ -74,6 +74,33 @@ body.light .header-now { color: #7c4a00; }
   text-transform: uppercase;
 }
 
+/* Inline ADJ badge in the header — only shown when the anchor zone has an
+   active manual offset override. Visually matches the per-card badge so the
+   user reads "ADJ" consistently across the whole UI. */
+.header-adj {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+body.dark .header-adj {
+  color: #f5c043;
+  background: rgba(245, 192, 67, 0.14);
+  border: 1px solid rgba(245, 192, 67, 0.45);
+}
+body.light .header-adj {
+  color: #7c4a00;
+  background: rgba(232, 200, 74, 0.22);
+  border: 1px solid rgba(124, 74, 0, 0.45);
+}
+.header-adj[hidden],
+.header-adj:empty { display: none; }
+
 .header-right { display: flex; align-items: center; gap: 15px; padding-top: 4px; }
 
 .live-dot {

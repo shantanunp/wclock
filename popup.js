@@ -231,12 +231,6 @@ function updateScale(h24) {
   );
 }
 
-// ── Live wall-clock helper ───────────────────────────────────────────────────
-function getLiveNow() {
-  const n = new Date();
-  return { h: n.getHours(), m: n.getMinutes(), s: n.getSeconds() };
-}
-
 // ── Time formatting ──────────────────────────────────────────────────────────
 function fmt(totalMins) {
   let h = Math.floor(totalMins / 60) % 24;
@@ -248,12 +242,35 @@ function fmt(totalMins) {
   return { t: String(h % 12 || 12).padStart(2, '0') + ':' + m, a: h >= 12 ? 'PM' : 'AM' };
 }
 
-// Header always shows live local (browser) time — independent of zones list.
-function updateHeader(t) {
-  const totalMin = t.h * 60 + t.m;
-  const { t: timeStr, a: ampm } = fmt(totalMin);
+// Header follows the ANCHOR zone (first card) so it stays semantically in sync
+// with the slider and the highlighted card. The user's actual browser-local
+// time is irrelevant for the widget's reference frame.
+function updateHeader(now = new Date()) {
+  const anchor   = PRESET_BY_ID[zones[0]];
+  const utcMins  = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const aOff     = anchorOffset();
+  const aMins    = ((utcMins + aOff) % 1440 + 1440) % 1440;
+  const { t: timeStr, a: ampm } = fmt(aMins);
   document.getElementById('headerTime').textContent = timeStr;
   document.getElementById('headerAmpm').textContent = ampm;
+
+  const tzEl = document.getElementById('headerTz');
+  if (tzEl && anchor) tzEl.textContent = nameFor(anchor, now);
+
+  // Mirror the per-card ADJ badge in the header when the anchor has an
+  // active manual override — keeps the "trust this displayed time" signal
+  // consistent everywhere.
+  const adjEl = document.getElementById('headerAdj');
+  if (adjEl) {
+    const adj = anchor ? overrideFor(anchor.id) : 0;
+    if (adj) {
+      adjEl.textContent = 'ADJ ' + formatAdj(adj);
+      adjEl.hidden = false;
+    } else {
+      adjEl.textContent = '';
+      adjEl.hidden = true;
+    }
+  }
 }
 
 // ── Zone cards (dynamic) ─────────────────────────────────────────────────────
@@ -370,7 +387,7 @@ function setMode(m) {
   clockMode = m;
   document.getElementById('btn12').classList.toggle('on', m === 12);
   document.getElementById('btn24').classList.toggle('on', m === 24);
-  updateHeader(getLiveNow());
+  updateHeader();
   refreshFromSlider();
   store.set({ [STORAGE_KEYS.mode]: m });
 }
@@ -484,6 +501,10 @@ function renderEditor() {
         setOverride(id, 0);
       } else return;
       renderEditor();
+      // Snap the header/slider to the new anchor state without waiting for
+      // the 1-second tick — keeps the editor feeling reactive.
+      updateHeader();
+      if (sliderMin === null) refreshFromSlider();
     });
   });
   const addBtn = document.getElementById('zoneAddBtn');
@@ -518,6 +539,7 @@ function exitEditMode() {
   document.getElementById('zoneEditBtn').textContent = '⚙ EDIT';
   renderZoneCards();
   refreshFromSlider();
+  updateHeader();
 }
 
 function toggleEditMode() {
@@ -528,9 +550,7 @@ function toggleEditMode() {
 // ── 1-second tick loop ───────────────────────────────────────────────────────
 function tick() {
   const now = new Date();
-
-  // Header always shows the user's browser-local wall clock.
-  updateHeader({ h: now.getHours(), m: now.getMinutes(), s: now.getSeconds() });
+  updateHeader(now);
 
   if (sliderMin === null) {
     // Drive everything from UTC so the user's local zone is irrelevant — the

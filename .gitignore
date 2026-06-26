@@ -73,4 +73,3 @@ coverage/
 .nyc_output/
 
 # ── Build-time tooling (not needed at runtime; icons/*.png are already shipped) ─
-scripts/
